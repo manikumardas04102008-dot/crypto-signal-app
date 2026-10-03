@@ -1,75 +1,31 @@
-<!doctype html>
-<html lang="hi">
-<head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#0b1020">
-<link rel="manifest" href="manifest.json">
-<title>Crypto Signal</title>
+<!doctype html><html><head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="theme-color" content="#111827"><link rel="manifest" href="manifest.json">
+<title>Market Scanner</title>
 <style>
-*{box-sizing:border-box}body{margin:0;background:#0b1020;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif}
-main{max-width:520px;margin:auto;padding:16px}.top{display:flex;justify-content:space-between;align-items:center}
-h1{font-size:23px;margin:4px 0}.muted{color:#94a3b8;font-size:12px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:15px 0}
-select,button{padding:12px;border-radius:12px;border:1px solid #334155;background:#111827;color:#fff;font-size:14px}
-button{background:#2563eb;border:0;font-weight:700}.card{background:#111827;border:1px solid #263244;border-radius:20px;padding:18px;margin:12px 0}
-.signal{font-size:31px;font-weight:800}.long{color:#22c55e}.short{color:#ef4444}.wait{color:#fbbf24}
-.price{font-size:28px;font-weight:700;margin:5px 0 16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
-.box{background:#0b1222;border-radius:13px;padding:11px}.lab{color:#94a3b8;font-size:11px}.val{font-weight:700;margin-top:4px}
-.reason{font-size:13px;line-height:1.6;color:#cbd5e1;margin-top:14px}.bar{height:8px;background:#263244;border-radius:20px;overflow:hidden;margin-top:14px}.fill{height:100%;width:0;background:#22c55e}
-</style></head>
-<body><main>
-<div class="top"><div><div class="muted">AUTO MARKET SIGNAL</div><h1>Crypto Signal 📊</h1></div><div id="status" class="muted">● LIVE</div></div>
-<div class="controls">
-<select id="symbol"><option value="BTCUSDT">BTC / USDT</option><option value="ETHUSDT">ETH / USDT</option></select>
-<select id="tf"><option value="5m">5 Minute</option><option value="15m">15 Minute</option><option value="1h">1 Hour</option></select>
-</div>
-<button onclick="analyze()" style="width:100%">🔄 CHECK SIGNAL</button>
-<div class="card">
-<div id="signal" class="signal wait">⚪ WAIT</div>
-<div id="price" class="price">Loading...</div>
-<div class="grid">
-<div class="box"><div class="lab">ENTRY</div><div id="entry" class="val">—</div></div>
-<div class="box"><div class="lab">STOP LOSS</div><div id="sl" class="val">—</div></div>
-<div class="box"><div class="lab">TP 1</div><div id="tp1" class="val">—</div></div>
-<div class="box"><div class="lab">TP 2</div><div id="tp2" class="val">—</div></div>
-<div class="box"><div class="lab">TP 3</div><div id="tp3" class="val">—</div></div>
-<div class="box"><div class="lab">CONFIRMATION</div><div id="score" class="val">—</div></div>
-</div>
-<div class="bar"><div id="fill" class="fill"></div></div>
-<div id="reason" class="reason">Market data load ho raha hai...</div>
-</div>
-<div class="card"><b>Indicators</b><div id="ind" class="reason">—</div></div>
-<div class="muted" style="text-align:center">Auto refresh: 30 sec • Educational tool • No guaranteed profit</div>
-</main>
+body{margin:0;font-family:system-ui;background:#f3f4f6;color:#111827}header{background:#111827;color:white;padding:16px;position:sticky;top:0}h1{margin:0;font-size:21px}.wrap{max-width:900px;margin:auto;padding:12px}.tabs,.tf{display:flex;gap:7px;overflow:auto;padding:8px 0}.tabs button,.tf button{border:0;border-radius:18px;padding:9px 13px;background:white;white-space:nowrap}.active{background:#111827!important;color:white}.card{background:white;border-radius:15px;padding:14px;margin:9px 0;box-shadow:0 2px 8px #0001}.row{display:flex;justify-content:space-between;align-items:center}.symbol{font-weight:800}.price{font-size:12px;color:#6b7280}.signal{font-weight:800}.long{color:#087f3e}.short{color:#b42318}.wait{color:#6b7280}.grid{display:grid;grid-template-columns:repeat(3,1fr);gap:7px;margin-top:10px}.box{background:#f8fafc;padding:8px;border-radius:9px;font-size:12px}.box b{display:block;font-size:14px;margin-top:3px}.detail{display:none;border-top:1px solid #eee;margin-top:10px;padding-top:10px;font-size:12px}.show{display:block}.note{font-size:11px;color:#6b7280;line-height:1.4}.refresh{background:#2563eb!important;color:white!important}
+</style></head><body>
+<header><h1>📊 Market Scanner</h1><div>Multi-timeframe technical scanner</div></header>
+<div class="wrap"><div class="tabs" id="markets">
+<button class="active" data-m="nifty">NIFTY 50</button><button data-m="bank">BANK NIFTY</button><button data-m="crypto">CRYPTO</button><button data-m="global">GOLD & INDICES</button></div>
+<div class="tf"><button class="active" data-t="5m">5m</button><button data-t="10m">10m</button><button data-t="15m">15m</button><button data-t="1h">1H</button><button data-t="4h">4H</button><button data-t="1d">1D</button><button id="refresh" class="refresh">↻ Refresh</button></div>
+<div id="status" class="note">Loading…</div><div id="list"></div>
+<div class="note">Signals are rule-based technical analysis, not guaranteed predictions or profit. Public data availability varies by market.</div></div>
 <script>
-const $=id=>document.getElementById(id);
+const sets={
+nifty:[["RELIANCE","RELIANCE.NS"],["HDFCBANK","HDFCBANK.NS"],["ICICIBANK","ICICIBANK.NS"],["BHARTIARTL","BHARTIARTL.NS"],["TCS","TCS.NS"],["INFY","INFY.NS"],["ITC","ITC.NS"],["SBIN","SBIN.NS"],["LT","LT.NS"],["AXISBANK","AXISBANK.NS"],["KOTAKBANK","KOTAKBANK.NS"],["M&M","M&M.NS"],["BAJFINANCE","BAJFINANCE.NS"],["HINDUNILVR","HINDUNILVR.NS"],["SUNPHARMA","SUNPHARMA.NS"],["MARUTI","MARUTI.NS"],["TITAN","TITAN.NS"],["ADANIENT","ADANIENT.NS"],["HCLTECH","HCLTECH.NS"],["WIPRO","WIPRO.NS"],["NTPC","NTPC.NS"],["TATASTEEL","TATASTEEL.NS"],["POWERGRID","POWERGRID.NS"],["ONGC","ONGC.NS"],["COALINDIA","COALINDIA.NS"]],
+bank:[["HDFCBANK","HDFCBANK.NS"],["ICICIBANK","ICICIBANK.NS"],["SBIN","SBIN.NS"],["AXISBANK","AXISBANK.NS"],["KOTAKBANK","KOTAKBANK.NS"],["INDUSINDBK","INDUSINDBK.NS"],["BANKBARODA","BANKBARODA.NS"],["PNB","PNB.NS"],["FEDERALBNK","FEDERALBNK.NS"]],
+crypto:[["BTC","BTC-USD"],["ETH","ETH-USD"],["SOL","SOL-USD"],["BNB","BNB-USD"],["XRP","XRP-USD"],["DOGE","DOGE-USD"]],
+global:[["NIFTY","^NSEI"],["S&P 500","^GSPC"],["NASDAQ","^IXIC"],["DOW","^DJI"],["GOLD","GC=F"],["SILVER","SI=F"],["CRUDE","CL=F"]]};
+let market="nifty",tf="5m";
+const $=x=>document.getElementById(x);
+document.querySelectorAll("#markets button").forEach(b=>b.onclick=()=>{document.querySelectorAll("#markets button").forEach(x=>x.classList.remove("active"));b.classList.add("active");market=b.dataset.m;load()});
+document.querySelectorAll(".tf button[data-t]").forEach(b=>b.onclick=()=>{document.querySelectorAll(".tf button[data-t]").forEach(x=>x.classList.remove("active"));b.classList.add("active");tf=b.dataset.t;load()});
+$("refresh").onclick=load;
 function ema(a,n){let k=2/(n+1),e=a[0];for(let i=1;i<a.length;i++)e=a[i]*k+e*(1-k);return e}
-function rsi(a,n=14){let g=0,l=0;for(let i=1;i<=n;i++){let d=a[i]-a[i-1];g+=Math.max(d,0);l+=Math.max(-d,0)}let G=g/n,L=l/n;for(let i=n+1;i<a.length;i++){let d=a[i]-a[i-1];G=(G*(n-1)+Math.max(d,0))/n;L=(L*(n-1)+Math.max(-d,0))/n}return L?100-100/(1+G/L):100}
-function atr(h,l,c,n=14){let x=[];for(let i=1;i<c.length;i++)x.push(Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));return x.slice(-n).reduce((a,b)=>a+b,0)/n}
-async function analyze(){
-try{
-$("status").textContent="● LIVE";
-let sym=$("symbol").value,tf=$("tf").value;
-let res=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${tf}&limit=220`);
-if(!res.ok)throw Error();
-let k=await res.json(),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),c=k.map(x=>+x[4]),v=k.map(x=>+x[5]);
-let p=c.at(-1),e20=ema(c.slice(-100),20),e50=ema(c.slice(-150),50),R=rsi(c),A=atr(h,l,c);
-let volAvg=v.slice(-21,-1).reduce((a,b)=>a+b,0)/20,vol=v.at(-1)>volAvg*1.15;
-let long=[p>e20,e20>e50,R>50,vol].filter(Boolean).length;
-let short=[p<e20,e20<e50,R<50,vol].filter(Boolean).length;
-let type=long>=4?"LONG":short>=4?"SHORT":"WAIT",score=Math.max(long,short);
-let risk=A*1.05,sl=type=="LONG"?p-risk:type=="SHORT"?p+risk:null;
-let f=(x)=>x==null?"—":x.toLocaleString(undefined,{maximumFractionDigits:2});
-$("signal").textContent=type=="LONG"?"🟢 LONG":type=="SHORT"?"🔴 SHORT":"⚪ WAIT";
-$("signal").className="signal "+type.toLowerCase();$("price").textContent="$"+f(p);
-$("entry").textContent=type=="WAIT"?"Wait":f(p);$("sl").textContent=f(sl);
-$("tp1").textContent=type=="LONG"?f(p+risk):type=="SHORT"?f(p-risk):"—";
-$("tp2").textContent=type=="LONG"?f(p+2*risk):type=="SHORT"?f(p-2*risk):"—";
-$("tp3").textContent=type=="LONG"?f(p+3*risk):type=="SHORT"?f(p-3*risk):"—";
-$("score").textContent=score+"/4";$("fill").style.width=(score/4*100)+"%";
-$("reason").textContent=type=="WAIT"?"Signals mixed hain — confirmation ke bina trade mat lo.":`EMA + RSI + volume alignment se ${type} bias mila.`;
-$("ind").textContent=`EMA20: ${f(e20)} • EMA50: ${f(e50)} • RSI: ${R.toFixed(1)} • ATR: ${f(A)} • Volume: ${vol?"High":"Normal"}`;
-}catch(e){$("status").textContent="● ERROR";$("reason").textContent="Live market data load nahi hua. Internet connection check karo."}
-}
-analyze();setInterval(analyze,30000);
+function rsi(a,n=14){let g=0,l=0;for(let i=1;i<=n;i++){let d=a[i]-a[i-1];g+=Math.max(d,0);l+=Math.max(-d,0)}let ag=g/n,al=l/n;for(let i=n+1;i<a.length;i++){let d=a[i]-a[i-1];ag=(ag*(n-1)+Math.max(d,0))/n;al=(al*(n-1)+Math.max(-d,0))/n}return al?100-100/(1+ag/al):100}
+function atr(c,n=14){let t=[];for(let i=1;i<c.length;i++)t.push(Math.max(c[i].h-c[i].l,Math.abs(c[i].c-c[i-1].c),Math.abs(c[i-1].c-c[i].l)));return t.slice(-n).reduce((a,b)=>a+b,0)/n}
+function analyse(c){let p=c.at(-1).c,x=c.map(z=>z.c),v=c.map(z=>z.v),e20=ema(x.slice(-100),20),e50=ema(x.slice(-150),50),e200=ema(x.slice(-250),Math.min(200,Math.floor(x.length/2))),rr=rsi(x),at=atr(c),av=v.slice(-20).reduce((a,b)=>a+b,0)/20,s= (p>e20?1:-1)+(e20>e50?1:-1)+(p>e200?1:-1)+(rr>55?1:rr<45?-1:0)+(v.at(-1)>av?(p>x.at(-2)?1:-1):0);let sig=s>=3?"LONG SETUP":s<=-3?"SHORT SETUP":"WAIT",cl=s>=3?"long":s<=-3?"short":"wait";return {p,rr,s,sig,cl,sl:s>=3?p-at*1.2:s<=-3?p+at*1.2:null,tp:s>=3?p+at*1.5:s<=-3?p-at*1.5:null,why:[p>e20?"Price>EMA20":"Price<EMA20",e20>e50?"EMA20>EMA50":"EMA20<EMA50",p>e200?"Price>EMA200":"Price<EMA200",rr>55?"RSI bullish":rr<45?"RSI bearish":"RSI neutral"]}}
+async function get(sym){let q=tf==="1d"?["1d","1y"]:tf==="15m"?["15m","60d"]:["5m","7d"];if(tf==="1h"||tf==="4h")q=["1h","60d"];let u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(sym)+"?interval="+q[0]+"&range="+q[1],j=await fetch(u).then(r=>r.json()),z=j.chart.result?.[0],a=[];let x=z.indicators.quote[0];for(let i=0;i<z.timestamp.length;i++)if(x.close[i]!=null)a.push({o:x.open[i],h:x.high[i],l:x.low[i],c:x.close[i],v:x.volume[i]||0});if(tf==="10m"||tf==="4h"){let step=tf==="10m"?2:4,out=[];for(let i=0;i<a.length;i+=step){let g=a.slice(i,i+step);if(g.length<step)continue;out.push({o:g[0].o,h:Math.max(...g.map(z=>z.h)),l:Math.min(...g.map(z=>z.l)),c:g.at(-1).c,v:g.reduce((s,z)=>s+z.v,0)})}a=out}return a}
+async function load(){let list=sets[market];$("status").textContent="Scanning "+list.length+" symbols…";$("list").innerHTML="";for(const [name,sym] of list){let d=document.createElement("div");d.className="card";d.innerHTML="<div class=row><b>"+name+"</b><span>Loading…</span></div>";$("list").appendChild(d);try{let a=analyse(await get(sym));let f=n=>Number(n).toLocaleString(undefined,{maximumFractionDigits:n>100?2:4});d.innerHTML='<div class="row"><div><div class="symbol">'+name+'</div><div class="price">'+f(a.p)+'</div></div><div class="signal '+a.cl+'">'+a.sig+'</div></div><div class="grid"><div class="box">Alignment<b>'+Math.min(10,Math.max(0,5+a.s))+'/10</b></div><div class="box">RSI<b>'+a.rr.toFixed(1)+'</b></div><div class="box">SL<b>'+ (a.sl?f(a.sl):"—")+'</b></div></div><div class="detail"><b>Reason:</b> '+a.why.join(" • ")+'<br><b>Target 1:</b> '+(a.tp?f(a.tp):"—")+'</div>';d.onclick=()=>d.querySelector(".detail").classList.toggle("show")}catch(e){d.innerHTML='<div class="row"><b>'+name+'</b><span class="signal wait">DATA N/A</span></div>'}}$("status").textContent="Updated "+new Date().toLocaleTimeString();}load();setInterval(load,60000);
 </script></body></html>
