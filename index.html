@@ -9,8 +9,8 @@ body{margin:0;font-family:system-ui;background:#f3f4f6;color:#111827}header{back
 <div class="wrap"><div class="tabs" id="markets">
 <button class="active" data-m="nifty">NIFTY 50</button><button data-m="bank">BANK NIFTY</button><button data-m="crypto">CRYPTO</button><button data-m="global">GOLD & INDICES</button></div>
 <div class="tf"><button class="active" data-t="5m">5m</button><button data-t="10m">10m</button><button data-t="15m">15m</button><button data-t="1h">1H</button><button data-t="4h">4H</button><button data-t="1d">1D</button><button id="refresh" class="refresh">↻ Refresh</button></div>
-<div id="status" class="note">Loading…</div><div id="list"></div>
-<div class="note">Signals are rule-based technical analysis, not guaranteed predictions or profit. Public data availability varies by market.</div></div>
+<div id="status" class="note">Loading…</div><div class="note" style="margin:6px 0">ℹ️ Stock data is fetched through public web data endpoints; if one is blocked, the app tries fallback routes automatically.</div><div id="list"></div>
+<div class="note">Signals are rule-based technical analysis, not guaranteed predictions or profit. Public data availability varies by market; this is not a guaranteed real-time feed.</div></div>
 <script>
 const sets={
 nifty:[["RELIANCE","RELIANCE.NS"],["HDFCBANK","HDFCBANK.NS"],["ICICIBANK","ICICIBANK.NS"],["BHARTIARTL","BHARTIARTL.NS"],["TCS","TCS.NS"],["INFY","INFY.NS"],["ITC","ITC.NS"],["SBIN","SBIN.NS"],["LT","LT.NS"],["AXISBANK","AXISBANK.NS"],["KOTAKBANK","KOTAKBANK.NS"],["M&M","M&M.NS"],["BAJFINANCE","BAJFINANCE.NS"],["HINDUNILVR","HINDUNILVR.NS"],["SUNPHARMA","SUNPHARMA.NS"],["MARUTI","MARUTI.NS"],["TITAN","TITAN.NS"],["ADANIENT","ADANIENT.NS"],["HCLTECH","HCLTECH.NS"],["WIPRO","WIPRO.NS"],["NTPC","NTPC.NS"],["TATASTEEL","TATASTEEL.NS"],["POWERGRID","POWERGRID.NS"],["ONGC","ONGC.NS"],["COALINDIA","COALINDIA.NS"]],
@@ -26,6 +26,47 @@ function ema(a,n){let k=2/(n+1),e=a[0];for(let i=1;i<a.length;i++)e=a[i]*k+e*(1-
 function rsi(a,n=14){let g=0,l=0;for(let i=1;i<=n;i++){let d=a[i]-a[i-1];g+=Math.max(d,0);l+=Math.max(-d,0)}let ag=g/n,al=l/n;for(let i=n+1;i<a.length;i++){let d=a[i]-a[i-1];ag=(ag*(n-1)+Math.max(d,0))/n;al=(al*(n-1)+Math.max(-d,0))/n}return al?100-100/(1+ag/al):100}
 function atr(c,n=14){let t=[];for(let i=1;i<c.length;i++)t.push(Math.max(c[i].h-c[i].l,Math.abs(c[i].c-c[i-1].c),Math.abs(c[i-1].c-c[i].l)));return t.slice(-n).reduce((a,b)=>a+b,0)/n}
 function analyse(c){let p=c.at(-1).c,x=c.map(z=>z.c),v=c.map(z=>z.v),e20=ema(x.slice(-100),20),e50=ema(x.slice(-150),50),e200=ema(x.slice(-250),Math.min(200,Math.floor(x.length/2))),rr=rsi(x),at=atr(c),av=v.slice(-20).reduce((a,b)=>a+b,0)/20,s= (p>e20?1:-1)+(e20>e50?1:-1)+(p>e200?1:-1)+(rr>55?1:rr<45?-1:0)+(v.at(-1)>av?(p>x.at(-2)?1:-1):0);let sig=s>=3?"LONG SETUP":s<=-3?"SHORT SETUP":"WAIT",cl=s>=3?"long":s<=-3?"short":"wait";return {p,rr,s,sig,cl,sl:s>=3?p-at*1.2:s<=-3?p+at*1.2:null,tp:s>=3?p+at*1.5:s<=-3?p-at*1.5:null,why:[p>e20?"Price>EMA20":"Price<EMA20",e20>e50?"EMA20>EMA50":"EMA20<EMA50",p>e200?"Price>EMA200":"Price<EMA200",rr>55?"RSI bullish":rr<45?"RSI bearish":"RSI neutral"]}}
-async function get(sym){let q=tf==="1d"?["1d","1y"]:tf==="15m"?["15m","60d"]:["5m","7d"];if(tf==="1h"||tf==="4h")q=["1h","60d"];let u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(sym)+"?interval="+q[0]+"&range="+q[1],j=await fetch(u).then(r=>r.json()),z=j.chart.result?.[0],a=[];let x=z.indicators.quote[0];for(let i=0;i<z.timestamp.length;i++)if(x.close[i]!=null)a.push({o:x.open[i],h:x.high[i],l:x.low[i],c:x.close[i],v:x.volume[i]||0});if(tf==="10m"||tf==="4h"){let step=tf==="10m"?2:4,out=[];for(let i=0;i<a.length;i+=step){let g=a.slice(i,i+step);if(g.length<step)continue;out.push({o:g[0].o,h:Math.max(...g.map(z=>z.h)),l:Math.min(...g.map(z=>z.l)),c:g.at(-1).c,v:g.reduce((s,z)=>s+z.v,0)})}a=out}return a}
-async function load(){let list=sets[market];$("status").textContent="Scanning "+list.length+" symbols…";$("list").innerHTML="";for(const [name,sym] of list){let d=document.createElement("div");d.className="card";d.innerHTML="<div class=row><b>"+name+"</b><span>Loading…</span></div>";$("list").appendChild(d);try{let a=analyse(await get(sym));let f=n=>Number(n).toLocaleString(undefined,{maximumFractionDigits:n>100?2:4});d.innerHTML='<div class="row"><div><div class="symbol">'+name+'</div><div class="price">'+f(a.p)+'</div></div><div class="signal '+a.cl+'">'+a.sig+'</div></div><div class="grid"><div class="box">Alignment<b>'+Math.min(10,Math.max(0,5+a.s))+'/10</b></div><div class="box">RSI<b>'+a.rr.toFixed(1)+'</b></div><div class="box">SL<b>'+ (a.sl?f(a.sl):"—")+'</b></div></div><div class="detail"><b>Reason:</b> '+a.why.join(" • ")+'<br><b>Target 1:</b> '+(a.tp?f(a.tp):"—")+'</div>';d.onclick=()=>d.querySelector(".detail").classList.toggle("show")}catch(e){d.innerHTML='<div class="row"><b>'+name+'</b><span class="signal wait">DATA N/A</span></div>'}}$("status").textContent="Updated "+new Date().toLocaleTimeString();}load();setInterval(load,60000);
+async function fetchJson(url){
+  const urls=[
+    url,
+    "https://corsproxy.io/?url="+encodeURIComponent(url),
+    "https://api.allorigins.win/raw?url="+encodeURIComponent(url)
+  ];
+  let lastErr;
+  for(const u of urls){
+    try{
+      const r=await fetch(u,{cache:"no-store"});
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      const j=await r.json();
+      if(j?.chart?.result?.[0]) return j;
+      throw new Error("No chart data");
+    }catch(e){lastErr=e;}
+  }
+  throw lastErr||new Error("Data fetch failed");
+}
+async function get(sym){
+  let q;
+  if(tf==="1d") q=["1d","1y"];
+  else if(tf==="15m") q=["15m","60d"];
+  else q=["5m","7d"];
+  if(tf==="1h"||tf==="4h") q=["1h","60d"];
+  const u="https://query1.finance.yahoo.com/v8/finance/chart/"+encodeURIComponent(sym)+"?interval="+q[0]+"&range="+q[1]+"&includePrePost=false";
+  const j=await fetchJson(u), z=j.chart.result?.[0];
+  if(!z || !z.timestamp) throw new Error("No data");
+  const x=z.indicators.quote?.[0]||{}, a=[];
+  for(let i=0;i<z.timestamp.length;i++){
+    if(x.close?.[i]!=null && x.high?.[i]!=null && x.low?.[i]!=null)
+      a.push({o:x.open?.[i]??x.close[i],h:x.high[i],l:x.low[i],c:x.close[i],v:x.volume?.[i]||0});
+  }
+  if(tf==="10m"||tf==="4h"){
+    const step=tf==="10m"?2:4,out=[];
+    for(let i=0;i<a.length;i+=step){
+      const g=a.slice(i,i+step); if(g.length<step) continue;
+      out.push({o:g[0].o,h:Math.max(...g.map(z=>z.h)),l:Math.min(...g.map(z=>z.l)),c:g.at(-1).c,v:g.reduce((s,z)=>s+z.v,0)});
+    }
+    return out;
+  }
+  return a;
+}
+async function load(){let list=sets[market];$("status").textContent="Scanning "+list.length+" symbols…";$("list").innerHTML="";for(const [name,sym] of list){let d=document.createElement("div");d.className="card";d.innerHTML="<div class=row><b>"+name+"</b><span>Loading…</span></div>";$("list").appendChild(d);try{let a=analyse(await get(sym));let f=n=>Number(n).toLocaleString(undefined,{maximumFractionDigits:n>100?2:4});d.innerHTML='<div class="row"><div><div class="symbol">'+name+'</div><div class="price">'+f(a.p)+'</div></div><div class="signal '+a.cl+'">'+a.sig+'</div></div><div class="grid"><div class="box">Alignment<b>'+Math.min(10,Math.max(0,5+a.s))+'/10</b></div><div class="box">RSI<b>'+a.rr.toFixed(1)+'</b></div><div class="box">SL<b>'+ (a.sl?f(a.sl):"—")+'</b></div></div><div class="detail"><b>Reason:</b> '+a.why.join(" • ")+'<br><b>Target 1:</b> '+(a.tp?f(a.tp):"—")+'</div>';d.onclick=()=>d.querySelector(".detail").classList.toggle("show")}catch(e){d.innerHTML='<div class="row"><div><b>'+name+'</b><div class="price">Data unavailable right now</div></div><span class="signal wait">DATA N/A</span></div>'}}$("status").textContent="Updated "+new Date().toLocaleTimeString();}load();setInterval(load,120000);
 </script></body></html>
