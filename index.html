@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="hi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#0b1020">
+<link rel="manifest" href="manifest.json">
+<title>Crypto Signal</title>
+<style>
+*{box-sizing:border-box}body{margin:0;background:#0b1020;color:#f8fafc;font-family:system-ui,-apple-system,sans-serif}
+main{max-width:520px;margin:auto;padding:16px}.top{display:flex;justify-content:space-between;align-items:center}
+h1{font-size:23px;margin:4px 0}.muted{color:#94a3b8;font-size:12px}.controls{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:15px 0}
+select,button{padding:12px;border-radius:12px;border:1px solid #334155;background:#111827;color:#fff;font-size:14px}
+button{background:#2563eb;border:0;font-weight:700}.card{background:#111827;border:1px solid #263244;border-radius:20px;padding:18px;margin:12px 0}
+.signal{font-size:31px;font-weight:800}.long{color:#22c55e}.short{color:#ef4444}.wait{color:#fbbf24}
+.price{font-size:28px;font-weight:700;margin:5px 0 16px}.grid{display:grid;grid-template-columns:1fr 1fr;gap:9px}
+.box{background:#0b1222;border-radius:13px;padding:11px}.lab{color:#94a3b8;font-size:11px}.val{font-weight:700;margin-top:4px}
+.reason{font-size:13px;line-height:1.6;color:#cbd5e1;margin-top:14px}.bar{height:8px;background:#263244;border-radius:20px;overflow:hidden;margin-top:14px}.fill{height:100%;width:0;background:#22c55e}
+</style></head>
+<body><main>
+<div class="top"><div><div class="muted">AUTO MARKET SIGNAL</div><h1>Crypto Signal 📊</h1></div><div id="status" class="muted">● LIVE</div></div>
+<div class="controls">
+<select id="symbol"><option value="BTCUSDT">BTC / USDT</option><option value="ETHUSDT">ETH / USDT</option></select>
+<select id="tf"><option value="5m">5 Minute</option><option value="15m">15 Minute</option><option value="1h">1 Hour</option></select>
+</div>
+<button onclick="analyze()" style="width:100%">🔄 CHECK SIGNAL</button>
+<div class="card">
+<div id="signal" class="signal wait">⚪ WAIT</div>
+<div id="price" class="price">Loading...</div>
+<div class="grid">
+<div class="box"><div class="lab">ENTRY</div><div id="entry" class="val">—</div></div>
+<div class="box"><div class="lab">STOP LOSS</div><div id="sl" class="val">—</div></div>
+<div class="box"><div class="lab">TP 1</div><div id="tp1" class="val">—</div></div>
+<div class="box"><div class="lab">TP 2</div><div id="tp2" class="val">—</div></div>
+<div class="box"><div class="lab">TP 3</div><div id="tp3" class="val">—</div></div>
+<div class="box"><div class="lab">CONFIRMATION</div><div id="score" class="val">—</div></div>
+</div>
+<div class="bar"><div id="fill" class="fill"></div></div>
+<div id="reason" class="reason">Market data load ho raha hai...</div>
+</div>
+<div class="card"><b>Indicators</b><div id="ind" class="reason">—</div></div>
+<div class="muted" style="text-align:center">Auto refresh: 30 sec • Educational tool • No guaranteed profit</div>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+function ema(a,n){let k=2/(n+1),e=a[0];for(let i=1;i<a.length;i++)e=a[i]*k+e*(1-k);return e}
+function rsi(a,n=14){let g=0,l=0;for(let i=1;i<=n;i++){let d=a[i]-a[i-1];g+=Math.max(d,0);l+=Math.max(-d,0)}let G=g/n,L=l/n;for(let i=n+1;i<a.length;i++){let d=a[i]-a[i-1];G=(G*(n-1)+Math.max(d,0))/n;L=(L*(n-1)+Math.max(-d,0))/n}return L?100-100/(1+G/L):100}
+function atr(h,l,c,n=14){let x=[];for(let i=1;i<c.length;i++)x.push(Math.max(h[i]-l[i],Math.abs(h[i]-c[i-1]),Math.abs(l[i]-c[i-1])));return x.slice(-n).reduce((a,b)=>a+b,0)/n}
+async function analyze(){
+try{
+$("status").textContent="● LIVE";
+let sym=$("symbol").value,tf=$("tf").value;
+let res=await fetch(`https://api.binance.com/api/v3/klines?symbol=${sym}&interval=${tf}&limit=220`);
+if(!res.ok)throw Error();
+let k=await res.json(),h=k.map(x=>+x[2]),l=k.map(x=>+x[3]),c=k.map(x=>+x[4]),v=k.map(x=>+x[5]);
+let p=c.at(-1),e20=ema(c.slice(-100),20),e50=ema(c.slice(-150),50),R=rsi(c),A=atr(h,l,c);
+let volAvg=v.slice(-21,-1).reduce((a,b)=>a+b,0)/20,vol=v.at(-1)>volAvg*1.15;
+let long=[p>e20,e20>e50,R>50,vol].filter(Boolean).length;
+let short=[p<e20,e20<e50,R<50,vol].filter(Boolean).length;
+let type=long>=4?"LONG":short>=4?"SHORT":"WAIT",score=Math.max(long,short);
+let risk=A*1.05,sl=type=="LONG"?p-risk:type=="SHORT"?p+risk:null;
+let f=(x)=>x==null?"—":x.toLocaleString(undefined,{maximumFractionDigits:2});
+$("signal").textContent=type=="LONG"?"🟢 LONG":type=="SHORT"?"🔴 SHORT":"⚪ WAIT";
+$("signal").className="signal "+type.toLowerCase();$("price").textContent="$"+f(p);
+$("entry").textContent=type=="WAIT"?"Wait":f(p);$("sl").textContent=f(sl);
+$("tp1").textContent=type=="LONG"?f(p+risk):type=="SHORT"?f(p-risk):"—";
+$("tp2").textContent=type=="LONG"?f(p+2*risk):type=="SHORT"?f(p-2*risk):"—";
+$("tp3").textContent=type=="LONG"?f(p+3*risk):type=="SHORT"?f(p-3*risk):"—";
+$("score").textContent=score+"/4";$("fill").style.width=(score/4*100)+"%";
+$("reason").textContent=type=="WAIT"?"Signals mixed hain — confirmation ke bina trade mat lo.":`EMA + RSI + volume alignment se ${type} bias mila.`;
+$("ind").textContent=`EMA20: ${f(e20)} • EMA50: ${f(e50)} • RSI: ${R.toFixed(1)} • ATR: ${f(A)} • Volume: ${vol?"High":"Normal"}`;
+}catch(e){$("status").textContent="● ERROR";$("reason").textContent="Live market data load nahi hua. Internet connection check karo."}
+}
+analyze();setInterval(analyze,30000);
+</script></body></html>
